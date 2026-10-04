@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>NESLURA Cafe - Admin</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #050505;
+            color: #f5d7a1;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .dashboard-summary {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .summary-box {
+            flex: 1;
+            max-width: 300px;
+            padding: 25px;
+            background: #111;
+            border: 1px solid #333;
+            text-align: center;
+        }
+
+        .summary-box h3 {
+            margin: 0 0 15px;
+            color: #f5d7a1;
+            font-size: 16px;
+        }
+
+        .summary-box p {
+            margin: 0;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #111;
+        }
+
+        th,
+        td {
+            padding: 14px;
+            border: 1px solid #333;
+            text-align: center;
+        }
+
+        th {
+            color: #f5d7a1;
+        }
+
+        td {
+            color: white;
+        }
+
+        .status-select {
+            padding: 8px 12px;
+            background: #050505;
+            color: #f5d7a1;
+            border: 1px solid #555;
+            border-radius: 4px;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="admin-container">
+
+        <h1>NESLURA CAFE — ADMIN ORDERS</h1>
+
+        <div class="dashboard-summary">
+
+            <div class="summary-box">
+                <h3>TOTAL ORDERS</h3>
+                <p id="totalOrders">0</p>
+            </div>
+
+            <div class="summary-box">
+                <h3>TOTAL ITEMS</h3>
+                <p id="totalItems">0</p>
+            </div>
+
+            <div class="summary-box">
+                <h3>TOTAL REVENUE</h3>
+                <p id="totalRevenue">₹0.00</p>
+            </div>
+
+        </div>
+<div class="search-container">
+
+    <input
+        type="text"
+        id="orderSearch"
+        placeholder="Search by customer, phone or item..."
+    >
+
+    <select id="statusFilter">
+        <option value="All">All Statuses</option>
+        <option value="Pending">Pending</option>
+        <option value="Preparing">Preparing</option>
+        <option value="Completed">Completed</option>
+        <option value="Cancelled">Cancelled</option>
+    </select>
+
+</div>
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody id="ordersTableBody">
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <script>
+let allOrders = [];
+
+        fetch("admin-orders")
+            .then(response => response.json())
+            .then(orders => {
+
+                allOrders = orders;
+                const tableBody =
+                    document.getElementById("ordersTableBody");
+
+                tableBody.innerHTML = "";
+
+                let totalItems = 0;
+                let totalRevenue = 0;
+
+                orders.forEach(order => {
+
+                    const row =
+                        document.createElement("tr");
+
+                    row.innerHTML = `
+                        <td>${order.id}</td>
+                        <td>${order.customer}</td>
+                        <td>${order.phone}</td>
+                        <td>${order.item}</td>
+                        <td>${order.quantity}</td>
+                        <td>₹${Number(order.total).toFixed(2)}</td>
+                        <td>${order.date}</td>
+
+                        <td>
+                            <select class="status-select" data-id="${order.id}">
+                                <option value="Pending" ${order.status === "Pending" ? "selected" : ""}>Pending</option>
+                                <option value="Preparing" ${order.status === "Preparing" ? "selected" : ""}>Preparing</option>
+                                <option value="Completed" ${order.status === "Completed" ? "selected" : ""}>Completed</option>
+                                <option value="Cancelled" ${order.status === "Cancelled" ? "selected" : ""}>Cancelled</option>
+                            </select>
+                        </td>
+                    `;
+
+                    tableBody.appendChild(row);
+
+                    totalItems += Number(order.quantity);
+                    totalRevenue += Number(order.total);
+                });
+
+                document.getElementById("totalOrders").textContent =
+                    orders.length;
+
+                document.getElementById("totalItems").textContent =
+                    totalItems;
+
+                document.getElementById("totalRevenue").textContent =
+                    "₹" + totalRevenue.toFixed(2);
+
+            })
+
+            .catch(error => {
+                console.error("Error loading orders:", error);
+            });
+document.addEventListener("change", function (event) {
+
+    if (event.target.classList.contains("status-select")) {
+
+        const orderId = event.target.dataset.id;
+        const newStatus = event.target.value;
+
+        fetch("update-order-status", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body:
+                "id=" + encodeURIComponent(orderId) +
+                "&status=" + encodeURIComponent(newStatus)
+        })
+        .then(response => response.json())
+        .then(result => {
+
+            if (result.success) {
+                console.log("Order status updated successfully.");
+            } else {
+                alert("Failed to update order status.");
+            }
+
+        })
+        .catch(error => {
+            console.error("Error updating status:", error);
+            alert("Error updating order status.");
+        });
+    }
+
+});
+
+function filterOrders() {
+
+    const searchText =
+        document.getElementById("orderSearch").value.toLowerCase();
+
+    const selectedStatus =
+        document.getElementById("statusFilter").value;
+
+    const filteredOrders = allOrders.filter(order => {
+
+        const matchesSearch =
+            order.customer.toLowerCase().includes(searchText) ||
+            order.phone.toLowerCase().includes(searchText) ||
+            order.item.toLowerCase().includes(searchText);
+
+        const matchesStatus =
+            selectedStatus === "All" ||
+            order.status === selectedStatus;
+
+        return matchesSearch && matchesStatus;
+    });
+
+    const tableBody =
+        document.getElementById("ordersTableBody");
+
+    tableBody.innerHTML = "";
+
+    filteredOrders.forEach(order => {
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${order.id}</td>
+            <td>${order.customer}</td>
+            <td>${order.phone}</td>
+            <td>${order.item}</td>
+            <td>${order.quantity}</td>
+            <td>₹${Number(order.total).toFixed(2)}</td>
+            <td>${order.date}</td>
+            <td>
+                <select class="status-select" data-id="${order.id}">
+                    <option value="Pending" ${order.status === "Pending" ? "selected" : ""}>Pending</option>
+                    <option value="Preparing" ${order.status === "Preparing" ? "selected" : ""}>Preparing</option>
+                    <option value="Completed" ${order.status === "Completed" ? "selected" : ""}>Completed</option>
+                    <option value="Cancelled" ${order.status === "Cancelled" ? "selected" : ""}>Cancelled</option>
+                </select>
+            </td>
+        `;
+
+        tableBody.appendChild(row);
+    });
+}
+
+document.getElementById("orderSearch")
+    .addEventListener("input", filterOrders);
+
+document.getElementById("statusFilter")
+    .addEventListener("change", filterOrders);
+    
+    </script>
+
+</body>
+
+</html>
+
